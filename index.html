@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FreshTart — Farm to Fork</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            olive: {
+              50: '#f6f7ee',
+              100: '#eaefc9',
+              200: '#d4de93',
+              300: '#b8c85a',
+              400: '#9aaf34',
+              500: '#6b7c2e',
+              600: '#556325',
+              700: '#404a1c',
+              800: '#2b3213',
+              900: '#16190a',
+            },
+            cream: '#faf9f5',
+            bark: '#2c2a24',
+          },
+          fontFamily: {
+            display: ['Playfair Display', 'serif'],
+            body: ['DM Sans', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    * { font-family: 'DM Sans', sans-serif; }
+    .font-display { font-family: 'Playfair Display', serif; }
+
+    /* Fade-in animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    .anim-1 { animation: fadeUp 0.7s ease both; }
+    .anim-2 { animation: fadeUp 0.7s 0.15s ease both; }
+    .anim-3 { animation: fadeUp 0.7s 0.3s ease both; }
+    .anim-4 { animation: fadeUp 0.7s 0.45s ease both; }
+    .anim-img { animation: fadeIn 1s 0.2s ease both; }
+
+    /* Subtle input focus ring */
+    input:focus { outline: none; }
+
+    /* Nav link underline */
+    .nav-link { position: relative; }
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: -2px; left: 0;
+      width: 0; height: 1.5px;
+      background: #6b7c2e;
+      transition: width 0.3s ease;
+    }
+    .nav-link:hover::after { width: 100%; }
+
+    /* Grain overlay */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      z-index: 9999;
+      opacity: 0.35;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #faf9f5; }
+    ::-webkit-scrollbar-thumb { background: #b8c85a; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-cream text-bark antialiased">
+
+  <!-- ── CART SIDEBAR ── -->
+  <div id="cartOverlay" class="fixed inset-0 bg-bark/40 backdrop-blur-sm z-[60] hidden" onclick="toggleCart()"></div>
+  <div id="cartSidebar"
+       class="fixed top-0 right-0 h-full w-full sm:w-96 bg-cream z-[70] shadow-2xl flex flex-col
+              translate-x-full transition-transform duration-300 ease-in-out">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-6 py-5 border-b border-olive-100">
+      <div class="flex items-center gap-2">
+        <svg class="w-5 h-5 text-olive-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/>
+        </svg>
+        <h2 class="font-display font-bold text-lg text-bark">Your Basket</h2>
+        <span id="cartCount" class="text-sm text-bark/40 font-normal">(0 items)</span>
+      </div>
+      <button onclick="toggleCart()" class="w-8 h-8 rounded-full hover:bg-olive-100 flex items-center justify-center text-bark/60 hover:text-bark transition-colors text-lg">✕</button>
+    </div>
+
+    <!-- Items -->
+    <div id="cartItems" class="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+      <!-- Empty state -->
+      <div id="cartEmpty" class="flex flex-col items-center justify-center h-64 text-center">
+        <div class="text-5xl mb-4">🛒</div>
+        <p class="font-semibold text-bark mb-1">Your basket is empty</p>
+        <p class="text-sm text-bark/50">Add some fresh items from the menu!</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div id="cartFooter" class="hidden border-t border-olive-100 px-6 py-5 bg-white space-y-4">
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between text-bark/60">
+          <span>Subtotal</span>
+          <span id="cartSubtotal">৳ 0</span>
+        </div>
+        <div class="flex justify-between text-bark/60">
+          <span>Delivery</span>
+          <span class="text-olive-600 font-medium">Free</span>
+        </div>
+        <div class="flex justify-between font-bold text-bark text-base pt-2 border-t border-olive-100">
+          <span>Total</span>
+          <span id="cartTotal">৳ 0</span>
+        </div>
+      </div>
+      <button onclick="checkout()"
+              class="w-full bg-olive-500 hover:bg-olive-600 text-white font-semibold py-3.5 rounded-xl transition-all duration-200 hover:shadow-md text-sm">
+        Proceed to Checkout →
+      </button>
+      <button onclick="clearCart()"
+              class="w-full text-bark/40 hover:text-red-500 text-xs font-medium transition-colors py-1">
+        Clear basket
+      </button>
+    </div>
+
+    <!-- Order success -->
+    <div id="orderSuccess" class="hidden border-t border-olive-100 px-6 py-8 text-center bg-white">
+      <div class="w-14 h-14 bg-olive-100 rounded-full flex items-center justify-center text-2xl mx-auto mb-4">✅</div>
+      <h3 class="font-display text-xl font-bold text-bark mb-1">Order Placed!</h3>
+      <p class="text-bark/55 text-sm mb-5">We'll deliver your fresh items shortly.</p>
+      <button onclick="resetOrder()"
+              class="bg-olive-500 hover:bg-olive-600 text-white text-sm font-medium px-6 py-2.5 rounded-full transition-colors">
+        Continue Shopping
+      </button>
+    </div>
+  </div>
+
+  <!-- ── NAV ── -->
+  <nav class="fixed top-0 left-0 right-0 z-50 bg-cream/90 backdrop-blur-sm border-b border-olive-100">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <!-- Logo -->
+      <a href="#" class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full bg-olive-500 flex items-center justify-center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/>
+          </svg>
+        </span>
+        <span class="font-display font-bold text-xl text-bark">
+          Fresh<span class="text-olive-500">Tart</span>
+        </span>
+      </a>
+
+      <!-- Desktop Links -->
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium text-bark/70">
+        <a href="#home"    class="nav-link hover:text-bark transition-colors">Home</a>
+        <a href="#about"   class="nav-link hover:text-bark transition-colors">About</a>
+        <a href="#menu"    class="nav-link hover:text-bark transition-colors">Menu</a>
+        <a href="#contact" class="nav-link hover:text-bark transition-colors">Contact</a>
+      </div>
+
+      <!-- CTA + Cart -->
+      <div class="hidden md:flex items-center gap-3">
+        <button onclick="toggleCart()" class="relative p-2.5 rounded-full border border-olive-200 hover:border-olive-400 transition-colors duration-200 group">
+          <svg class="w-5 h-5 text-bark/70 group-hover:text-bark transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/>
+          </svg>
+          <span id="cartBadge" class="absolute -top-1 -right-1 w-4 h-4 bg-olive-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center hidden">0</span>
+        </button>
+        <a href="#signup"
+           class="inline-flex items-center gap-2 bg-olive-500 hover:bg-olive-600 text-white text-sm font-medium px-5 py-2.5 rounded-full transition-all duration-200 hover:shadow-md">
+          Get Started
+        </a>
+      </div>
+
+      <!-- Mobile hamburger -->
+      <div class="md:hidden flex items-center gap-3">
+        <button onclick="toggleCart()" class="relative p-2 rounded-full border border-olive-200">
+          <svg class="w-5 h-5 text-bark/70" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/>
+          </svg>
+          <span id="cartBadgeMobile" class="absolute -top-1 -right-1 w-4 h-4 bg-olive-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center hidden">0</span>
+        </button>
+        <button id="menuBtn" class="flex flex-col gap-1.5 p-1" onclick="toggleMenu()">
+          <span class="block w-5 h-0.5 bg-bark transition-all" id="bar1"></span>
+          <span class="block w-5 h-0.5 bg-bark transition-all" id="bar2"></span>
+          <span class="block w-4 h-0.5 bg-bark transition-all" id="bar3"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="hidden md:hidden border-t border-olive-100 bg-cream">
+      <div class="px-6 py-4 flex flex-col gap-4 text-sm font-medium text-bark/70">
+        <a href="#home"    onclick="toggleMenu()" class="hover:text-olive-500 transition-colors">Home</a>
+        <a href="#about"   onclick="toggleMenu()" class="hover:text-olive-500 transition-colors">About</a>
+        <a href="#menu"    onclick="toggleMenu()" class="hover:text-olive-500 transition-colors">Menu</a>
+        <a href="#contact" onclick="toggleMenu()" class="hover:text-olive-500 transition-colors">Contact</a>
+        <a href="#signup"  onclick="toggleMenu()"
+           class="inline-flex justify-center bg-olive-500 text-white px-5 py-2.5 rounded-full text-sm font-medium">
+          Get Started
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── HERO ── -->
+  <section id="home" class="pt-28 pb-16 md:pt-36 md:pb-24 max-w-6xl mx-auto px-6">
+    <div class="grid md:grid-cols-2 gap-12 items-center">
+
+      <!-- Text -->
+      <div>
+        <p class="anim-1 text-olive-500 text-sm font-medium tracking-widest uppercase mb-4">Farm to Fork</p>
+        <h1 class="anim-2 font-display text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-bark mb-6">
+          Eat Fresh,<br/>
+          <em class="text-olive-500 not-italic">Live Well.</em>
+        </h1>
+        <p class="anim-3 text-bark/60 text-lg leading-relaxed mb-8 max-w-md">
+          Wholesome ingredients, honest flavours. We source directly from local farms to bring the season's best straight to your table.
+        </p>
+        <div class="anim-4 flex flex-wrap gap-3">
+          <a href="#menu"
+             class="bg-olive-500 hover:bg-olive-600 text-white font-medium px-7 py-3 rounded-full transition-all duration-200 hover:shadow-lg">
+            Explore Menu
+          </a>
+          <a href="#about"
+             class="border border-olive-200 hover:border-olive-400 text-bark/70 hover:text-bark font-medium px-7 py-3 rounded-full transition-all duration-200">
+            Our Story
+          </a>
+        </div>
+
+        <!-- Stats -->
+        <div class="mt-12 flex gap-8 border-t border-olive-100 pt-8">
+          <div>
+            <p class="font-display text-3xl font-bold text-bark">12+</p>
+            <p class="text-bark/50 text-sm mt-1">Local Farms</p>
+          </div>
+          <div class="w-px bg-olive-100"></div>
+          <div>
+            <p class="font-display text-3xl font-bold text-bark">80+</p>
+            <p class="text-bark/50 text-sm mt-1">Fresh Items</p>
+          </div>
+          <div class="w-px bg-olive-100"></div>
+          <div>
+            <p class="font-display text-3xl font-bold text-bark">100%</p>
+            <p class="text-bark/50 text-sm mt-1">Organic</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Image -->
+      <div class="anim-img relative">
+        <div class="absolute inset-0 rounded-3xl bg-olive-200 translate-x-4 translate-y-4 -z-10"></div>
+        <img src="irene-kredenets-AWMWcR3hQUg-unsplash.jpg" alt="Fresh vegetables and fruits"
+             class="w-full aspect-[4/3] object-cover rounded-3xl shadow-xl"/>
+        <!-- Floating badge -->
+        <div class="absolute -bottom-5 -left-5 bg-white rounded-2xl px-5 py-3 shadow-lg border border-olive-100 flex items-center gap-3">
+          <span class="w-9 h-9 bg-olive-100 rounded-full flex items-center justify-center text-lg">🥬</span>
+          <div>
+            <p class="text-xs text-bark/50 font-medium">Today's Pick</p>
+            <p class="text-sm font-semibold text-bark">Spring Greens</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── ABOUT ── -->
+  <section id="about" class="py-20 bg-olive-50">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="grid md:grid-cols-2 gap-16 items-center">
+        <div class="order-2 md:order-1">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-olive-100">
+              <div class="text-3xl mb-3">🌿</div>
+              <h3 class="font-semibold text-bark mb-1">100% Organic</h3>
+              <p class="text-sm text-bark/55 leading-relaxed">No pesticides, no shortcuts. Just nature's best.</p>
+            </div>
+            <div class="bg-olive-500 rounded-2xl p-6 shadow-sm">
+              <div class="text-3xl mb-3">🚜</div>
+              <h3 class="font-semibold text-white mb-1">Local Sourcing</h3>
+              <p class="text-sm text-white/70 leading-relaxed">Partnered with 12 farms within 50 miles.</p>
+            </div>
+            <div class="bg-olive-500 rounded-2xl p-6 shadow-sm">
+              <div class="text-3xl mb-3">❄️</div>
+              <h3 class="font-semibold text-white mb-1">Cold Chain</h3>
+              <p class="text-sm text-white/70 leading-relaxed">Freshness locked from harvest to delivery.</p>
+            </div>
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-olive-100">
+              <div class="text-3xl mb-3">♻️</div>
+              <h3 class="font-semibold text-bark mb-1">Zero Waste</h3>
+              <p class="text-sm text-bark/55 leading-relaxed">Eco packaging, compostable trays.</p>
+            </div>
+          </div>
+        </div>
+        <div class="order-1 md:order-2">
+          <p class="text-olive-500 text-sm font-medium tracking-widest uppercase mb-4">Who We Are</p>
+          <h2 class="font-display text-4xl md:text-5xl font-bold text-bark leading-tight mb-6">
+            Rooted in<br/><em class="text-olive-500">good food.</em>
+          </h2>
+          <p class="text-bark/60 leading-relaxed mb-4">
+            FreshTart began as a small farmers' market stall in 2019. Today we serve thousands of households who believe that what you eat should be real, honest, and nourishing.
+          </p>
+          <p class="text-bark/60 leading-relaxed mb-8">
+            We work directly with growers, cutting out the middleman so you get fresher food at fairer prices — and farmers earn more.
+          </p>
+          <a href="#signup" class="inline-flex items-center gap-2 text-olive-600 font-semibold hover:gap-3 transition-all duration-200 group">
+            Join the community
+            <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── MENU ── -->
+  <section id="menu" class="py-20 max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <p class="text-olive-500 text-sm font-medium tracking-widest uppercase mb-3">What's Fresh</p>
+      <h2 class="font-display text-4xl md:text-5xl font-bold text-bark">Today's Picks</h2>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Card macro -->
+      <!-- 1 -->
+      <div class="group bg-white rounded-2xl border border-olive-100 overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+        <div class="h-40 bg-gradient-to-br from-green-50 to-olive-100 flex items-center justify-center text-6xl">🥦</div>
+        <div class="p-5">
+          <div class="flex items-start justify-between mb-2">
+            <h3 class="font-semibold text-bark">Broccoli Crown</h3>
+            <span class="text-olive-600 font-bold text-sm">৳ 80</span>
+          </div>
+          <p class="text-bark/50 text-sm mb-4">Tender florets, crisp stalks. Packed with vitamins K & C.</p>
+          <button onclick="addToCart(this,'Broccoli Crown')"
+                  class="w-full py-2.5 rounded-xl border border-olive-300 text-olive-600 text-sm font-medium hover:bg-olive-500 hover:text-white hover:border-olive-500 transition-all duration-200">
+            Add to Basket
+          </button>
+        </div>
+      </div>
+      <!-- 2 -->
+      <div class="group bg-white rounded-2xl border border-olive-100 overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+        <div class="h-40 bg-gradient-to-br from-red-50 to-orange-100 flex items-center justify-center text-6xl">🫑</div>
+        <div class="p-5">
+          <div class="flex items-start justify-between mb-2">
+            <h3 class="font-semibold text-bark">Bell Pepper Mix</h3>
+            <span class="text-olive-600 font-bold text-sm">৳ 120</span>
+          </div>
+          <p class="text-bark/50 text-sm mb-4">Tri-colour capsicums. Sweetness in every crunch.</p>
+          <button onclick="addToCart(this,'Bell Pepper Mix')"
+                  class="w-full py-2.5 rounded-xl border border-olive-300 text-olive-600 text-sm font-medium hover:bg-olive-500 hover:text-white hover:border-olive-500 transition-all duration-200">
+            Add to Basket
+          </button>
+        </div>
+      </div>
+      <!-- 3 -->
+      <div class="group bg-white rounded-2xl border border-olive-100 overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+        <div class="h-40 bg-gradient-to-br from-orange-50 to-yellow-100 flex items-center justify-center text-6xl">🍊</div>
+        <div class="p-5">
+          <div class="flex items-start justify-between mb-2">
+            <h3 class="font-semibold text-bark">Citrus Bundle</h3>
+            <span class="text-olive-600 font-bold text-sm">৳ 150</span>
+          </div>
+          <p class="text-bark/50 text-sm mb-4">Navel oranges + pink grapefruit. Vitamin C powerhouse.</p>
+          <button onclick="addToCart(this,'Citrus Bundle')"
+                  class="w-full py-2.5 rounded-xl border border-olive-300 text-olive-600 text-sm font-medium hover:bg-olive-500 hover:text-white hover:border-olive-500 transition-all duration-200">
+            Add to Basket
+          </button>
+        </div>
+      </div>
+      <!-- 4 -->
+      <div class="group bg-white rounded-2xl border border-olive-100 overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+        <div class="h-40 bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center text-6xl">🍇</div>
+        <div class="p-5">
+          <div class="flex items-start justify-between mb-2">
+            <h3 class="font-semibold text-bark">Black Grapes</h3>
+            <span class="text-olive-600 font-bold text-sm">৳ 200</span>
+          </div>
+          <p class="text-bark/50 text-sm mb-4">Seedless, plump, antioxidant-rich. Fresh from the vine.</p>
+          <button onclick="addToCart(this,'Black Grapes')"
+                  class="w-full py-2.5 rounded-xl border border-olive-300 text-olive-600 text-sm font-medium hover:bg-olive-500 hover:text-white hover:border-olive-500 transition-all duration-200">
+            Add to Basket
+          </button>
+        </div>
+      </div>
+      <!-- 5 -->
+      <div class="group bg-white rounded-2xl border border-olive-100 overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+        <div class="h-40 bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center text-6xl">🍅</div>
+        <div class="p-5">
+          <div class="flex items-start justify-between mb-2">
+            <h3 class="font-semibold text-bark">Heirloom Tomatoes</h3>
+            <span class="text-olive-600 font-bold text-sm">৳ 90</span>
+          </div>
+          <p class="text-bark/50 text-sm mb-4">Vine-ripened, bursting with flavour. Perfect for salads.</p>
+          <button onclick="addToCart(this,'Heirloom Tomatoes')"
+                  class="w-full py-2.5 rounded-xl border border-olive-300 text-olive-600 text-sm font-medium hover:bg-olive-500 hover:text-white hover:border-olive-500 transition-all duration-200">
+            Add to Basket
+          </button>
+        </div>
+      </div>
+      <!-- 6 -->
+      <div class="group bg-white rounded-2xl border border-olive-100 overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+        <div class="h-40 bg-gradient-to-br from-green-50 to-teal-100 flex items-center justify-center text-6xl">🥑</div>
+        <div class="p-5">
+          <div class="flex items-start justify-between mb-2">
+            <h3 class="font-semibold text-bark">Hass Avocado</h3>
+            <span class="text-olive-600 font-bold text-sm">৳ 180</span>
+          </div>
+          <p class="text-bark/50 text-sm mb-4">Creamy, ready-to-eat. Rich in healthy fats.</p>
+          <button onclick="addToCart(this,'Hass Avocado')"
+                  class="w-full py-2.5 rounded-xl border border-olive-300 text-olive-600 text-sm font-medium hover:bg-olive-500 hover:text-white hover:border-olive-500 transition-all duration-200">
+            Add to Basket
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Basket toast -->
+    <div id="toast"
+         class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-bark text-white text-sm font-medium px-6 py-3 rounded-full shadow-lg opacity-0 pointer-events-none transition-opacity duration-300 z-50">
+      🛒 Added to basket!
+    </div>
+  </section>
+
+  <!-- ── SIGN UP ── -->
+  <section id="signup" class="py-20 bg-olive-50">
+    <div class="max-w-xl mx-auto px-6 text-center">
+      <p class="text-olive-500 text-sm font-medium tracking-widest uppercase mb-3">Join Us</p>
+      <h2 class="font-display text-4xl md:text-5xl font-bold text-bark mb-4">
+        Start fresh<br/><em class="text-olive-500">today.</em>
+      </h2>
+      <p class="text-bark/55 mb-10">Create your account and get ৳100 off your first order.</p>
+
+      <div id="signupForm" class="bg-white rounded-3xl border border-olive-100 shadow-sm p-8 text-left">
+        <div class="space-y-5">
+          <!-- Name -->
+          <div>
+            <label class="block text-sm font-medium text-bark/70 mb-1.5">Your Name</label>
+            <input id="inp-name" type="text" placeholder="e.g. Rahim Uddin"
+                   class="w-full px-4 py-3 rounded-xl border border-olive-200 focus:border-olive-500 bg-cream text-bark text-sm transition-colors placeholder:text-bark/30"/>
+          </div>
+          <!-- Email -->
+          <div>
+            <label class="block text-sm font-medium text-bark/70 mb-1.5">Email Address</label>
+            <input id="inp-email" type="email" placeholder="you@email.com"
+                   class="w-full px-4 py-3 rounded-xl border border-olive-200 focus:border-olive-500 bg-cream text-bark text-sm transition-colors placeholder:text-bark/30"/>
+          </div>
+          <!-- Phone -->
+          <div>
+            <label class="block text-sm font-medium text-bark/70 mb-1.5">Phone Number</label>
+            <input id="inp-phone" type="tel" placeholder="+8801XXXXXXXXX"
+                   class="w-full px-4 py-3 rounded-xl border border-olive-200 focus:border-olive-500 bg-cream text-bark text-sm transition-colors placeholder:text-bark/30"/>
+          </div>
+          <!-- Password -->
+          <div>
+            <label class="block text-sm font-medium text-bark/70 mb-1.5">Password</label>
+            <div class="relative">
+              <input id="inp-pass" type="password" placeholder="8+ characters"
+                     class="w-full px-4 py-3 rounded-xl border border-olive-200 focus:border-olive-500 bg-cream text-bark text-sm transition-colors placeholder:text-bark/30 pr-12"/>
+              <button type="button" onclick="togglePass()" id="eyeBtn"
+                      class="absolute right-4 top-1/2 -translate-y-1/2 text-bark/40 hover:text-bark/70 transition-colors text-xs font-medium">
+                SHOW
+              </button>
+            </div>
+          </div>
+
+          <!-- Error msg -->
+          <p id="errMsg" class="text-red-500 text-xs hidden"></p>
+
+          <!-- Submit & reset -->
+          <div class="flex gap-3 pt-2">
+            <button onclick="handleSignup()"
+                    class="flex-1 bg-olive-500 hover:bg-olive-600 text-white font-semibold py-3 rounded-xl transition-all duration-200 hover:shadow-md text-sm">
+              Create Account
+            </button>
+            <button onclick="clearForm()"
+                    class="px-5 py-3 rounded-xl border border-olive-200 hover:border-olive-400 text-bark/60 hover:text-bark text-sm font-medium transition-all duration-200">
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <p class="text-center text-xs text-bark/40 mt-6">
+          Already have an account?
+          <a href="#" class="text-olive-600 font-medium hover:underline">Log in</a>
+        </p>
+      </div>
+
+      <!-- Success state -->
+      <div id="successMsg" class="hidden bg-white rounded-3xl border border-olive-200 shadow-sm p-10 text-center">
+        <div class="w-16 h-16 bg-olive-100 rounded-full flex items-center justify-center text-3xl mx-auto mb-5">🌿</div>
+        <h3 class="font-display text-2xl font-bold text-bark mb-2">Welcome aboard!</h3>
+        <p class="text-bark/55 text-sm">Your account is ready. Happy eating fresh.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CONTACT ── -->
+  <section id="contact" class="py-20 max-w-6xl mx-auto px-6">
+    <div class="grid md:grid-cols-2 gap-16 items-start">
+      <div>
+        <p class="text-olive-500 text-sm font-medium tracking-widest uppercase mb-4">Get in Touch</p>
+        <h2 class="font-display text-4xl font-bold text-bark mb-6">We'd love to<br/><em class="text-olive-500">hear from you.</em></h2>
+        <p class="text-bark/55 leading-relaxed mb-10">Questions about our products, delivery areas, or wholesale enquiries — we're always here.</p>
+
+        <div class="space-y-5">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-olive-100 rounded-full flex items-center justify-center text-lg flex-shrink-0">📍</div>
+            <div>
+              <p class="text-sm font-semibold text-bark">Our Location</p>
+              <p class="text-sm text-bark/55">Khulna, Bangladesh</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-olive-100 rounded-full flex items-center justify-center text-lg flex-shrink-0">📞</div>
+            <div>
+              <p class="text-sm font-semibold text-bark">Phone</p>
+              <p class="text-sm text-bark/55">+880 1327000697</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-olive-100 rounded-full flex items-center justify-center text-lg flex-shrink-0">✉️</div>
+            <div>
+              <p class="text-sm font-semibold text-bark">Email</p>
+              <p class="text-sm text-bark/55">hello@freshtart.com.bd</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-olive-100 rounded-full flex items-center justify-center text-lg flex-shrink-0">🕐</div>
+            <div>
+              <p class="text-sm font-semibold text-bark">Hours</p>
+              <p class="text-sm text-bark/55">Sat–Thu · 8 AM – 9 PM</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick message -->
+      <div class="bg-olive-50 rounded-3xl p-8">
+        <h3 class="font-semibold text-bark mb-6 text-lg">Send a message</h3>
+        <div class="space-y-4">
+          <input type="text" placeholder="Your name"
+                 class="w-full px-4 py-3 rounded-xl border border-olive-200 bg-white focus:border-olive-500 text-bark text-sm placeholder:text-bark/30 transition-colors"/>
+          <input type="email" placeholder="Your email"
+                 class="w-full px-4 py-3 rounded-xl border border-olive-200 bg-white focus:border-olive-500 text-bark text-sm placeholder:text-bark/30 transition-colors"/>
+          <textarea placeholder="Your message..." rows="4"
+                    class="w-full px-4 py-3 rounded-xl border border-olive-200 bg-white focus:border-olive-500 text-bark text-sm placeholder:text-bark/30 transition-colors resize-none"></textarea>
+          <button onclick="sendMessage(this)"
+                  class="w-full bg-olive-500 hover:bg-olive-600 text-white font-semibold py-3 rounded-xl transition-all duration-200 hover:shadow-md text-sm">
+            Send Message
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ── -->
+  <footer class="bg-bark text-white">
+    <div class="max-w-6xl mx-auto px-6 py-12">
+      <div class="grid sm:grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+        <div class="sm:col-span-2 md:col-span-1">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="w-7 h-7 rounded-full bg-olive-400 flex items-center justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/>
+              </svg>
+            </span>
+            <span class="font-display font-bold text-xl">Fresh<span class="text-olive-400">Tart</span></span>
+          </div>
+          <p class="text-white/50 text-sm leading-relaxed">Bringing the farm closer to your fork, one fresh delivery at a time.</p>
+        </div>
+        <div>
+          <p class="font-semibold text-sm mb-4 text-white/80 uppercase tracking-wide">Quick Links</p>
+          <ul class="space-y-2 text-sm text-white/50">
+            <li><a href="#home" class="hover:text-white transition-colors">Home</a></li>
+            <li><a href="#about" class="hover:text-white transition-colors">About</a></li>
+            <li><a href="#menu" class="hover:text-white transition-colors">Menu</a></li>
+            <li><a href="#contact" class="hover:text-white transition-colors">Contact</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="font-semibold text-sm mb-4 text-white/80 uppercase tracking-wide">Policies</p>
+          <ul class="space-y-2 text-sm text-white/50">
+            <li><a href="#" class="hover:text-white transition-colors">Privacy Policy</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Terms of Use</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Delivery Info</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Refunds</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="font-semibold text-sm mb-4 text-white/80 uppercase tracking-wide">Follow Us</p>
+          <div class="flex gap-3">
+            <a href="#" class="w-9 h-9 bg-white/10 hover:bg-olive-500 rounded-full flex items-center justify-center transition-colors duration-200 text-sm">f</a>
+            <a href="#" class="w-9 h-9 bg-white/10 hover:bg-olive-500 rounded-full flex items-center justify-center transition-colors duration-200 text-sm">in</a>
+            <a href="#" class="w-9 h-9 bg-white/10 hover:bg-olive-500 rounded-full flex items-center justify-center transition-colors duration-200 text-base">𝕏</a>
+          </div>
+        </div>
+      </div>
+      <div class="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white/40">
+        <p>© 2026 FreshTart. All rights reserved.</p>
+        <p>Made with 🌿 in Dhaka, Bangladesh</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ── CART STATE ──
+    const PRICES = {
+      'Broccoli Crown': 80, 'Bell Pepper Mix': 120, 'Citrus Bundle': 150,
+      'Black Grapes': 200, 'Heirloom Tomatoes': 90, 'Hass Avocado': 180
+    };
+    const EMOJIS = {
+      'Broccoli Crown': '🥦', 'Bell Pepper Mix': '🫑', 'Citrus Bundle': '🍊',
+      'Black Grapes': '🍇', 'Heirloom Tomatoes': '🍅', 'Hass Avocado': '🥑'
+    };
+    let cart = {}; // { name: qty }
+
+    function toggleCart() {
+      const sidebar = document.getElementById('cartSidebar');
+      const overlay = document.getElementById('cartOverlay');
+      const isOpen  = !sidebar.classList.contains('translate-x-full');
+      sidebar.classList.toggle('translate-x-full', isOpen);
+      overlay.classList.toggle('hidden', isOpen);
+      document.body.style.overflow = isOpen ? '' : 'hidden';
+    }
+
+    function addToCart(btn, name) {
+      cart[name] = (cart[name] || 0) + 1;
+      renderCart();
+
+      // Button feedback
+      btn.textContent = '✓ Added';
+      btn.classList.add('bg-olive-500','text-white','border-olive-500');
+      setTimeout(() => {
+        btn.textContent = 'Add to Basket';
+        btn.classList.remove('bg-olive-500','text-white','border-olive-500');
+      }, 1500);
+
+      // Toast
+      const toast = document.getElementById('toast');
+      toast.textContent = `${EMOJIS[name]} ${name} added!`;
+      toast.style.opacity = '1';
+      setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+
+      // Bounce badge
+      ['cartBadge','cartBadgeMobile'].forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.remove('scale-125');
+        void el.offsetWidth;
+        el.classList.add('scale-125');
+        setTimeout(() => el.classList.remove('scale-125'), 300);
+      });
+    }
+
+    function changeQty(name, delta) {
+      cart[name] = (cart[name] || 0) + delta;
+      if (cart[name] <= 0) delete cart[name];
+      renderCart();
+    }
+
+    function removeItem(name) {
+      delete cart[name];
+      renderCart();
+    }
+
+    function clearCart() {
+      cart = {};
+      renderCart();
+    }
+
+    function renderCart() {
+      const keys    = Object.keys(cart);
+      const total   = keys.reduce((s, k) => s + PRICES[k] * cart[k], 0);
+      const itemCnt = keys.reduce((s, k) => s + cart[k], 0);
+
+      // Badge
+      ['cartBadge','cartBadgeMobile'].forEach(id => {
+        const el = document.getElementById(id);
+        el.textContent = itemCnt;
+        el.classList.toggle('hidden', itemCnt === 0);
+      });
+
+      // Count label
+      document.getElementById('cartCount').textContent =
+        itemCnt === 0 ? '(0 items)' : `(${itemCnt} item${itemCnt > 1 ? 's' : ''})`;
+
+      // Empty state
+      document.getElementById('cartEmpty').classList.toggle('hidden', keys.length > 0);
+      document.getElementById('cartFooter').classList.toggle('hidden', keys.length === 0);
+
+      // Remove old rows
+      document.querySelectorAll('.cart-row').forEach(el => el.remove());
+
+      const container = document.getElementById('cartItems');
+      keys.forEach(name => {
+        const qty   = cart[name];
+        const price = PRICES[name];
+        const row   = document.createElement('div');
+        row.className = 'cart-row flex items-center gap-3 bg-white rounded-2xl border border-olive-100 px-4 py-3';
+        row.innerHTML = `
+          <span class="text-2xl flex-shrink-0">${EMOJIS[name]}</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-bark truncate">${name}</p>
+            <p class="text-xs text-bark/50">৳ ${price} each</p>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <button onclick="changeQty('${name}',-1)"
+                    class="w-7 h-7 rounded-full border border-olive-200 hover:border-olive-400 hover:bg-olive-50 text-bark/70 text-sm font-bold transition-all flex items-center justify-center">−</button>
+            <span class="w-5 text-center text-sm font-semibold text-bark">${qty}</span>
+            <button onclick="changeQty('${name}',1)"
+                    class="w-7 h-7 rounded-full border border-olive-200 hover:border-olive-400 hover:bg-olive-50 text-bark/70 text-sm font-bold transition-all flex items-center justify-center">+</button>
+          </div>
+          <div class="text-right flex-shrink-0 w-16">
+            <p class="text-sm font-bold text-olive-600">৳ ${price * qty}</p>
+            <button onclick="removeItem('${name}')"
+                    class="text-[10px] text-bark/30 hover:text-red-400 transition-colors mt-0.5">remove</button>
+          </div>`;
+        container.appendChild(row);
+      });
+
+      // Totals
+      document.getElementById('cartSubtotal').textContent = `৳ ${total}`;
+      document.getElementById('cartTotal').textContent    = `৳ ${total}`;
+    }
+
+    function checkout() {
+      document.getElementById('cartFooter').classList.add('hidden');
+      document.getElementById('orderSuccess').classList.remove('hidden');
+    }
+
+    function resetOrder() {
+      cart = {};
+      renderCart();
+      document.getElementById('orderSuccess').classList.add('hidden');
+      toggleCart();
+    }
+
+    // ── MOBILE MENU ──
+    function toggleMenu() {
+      document.getElementById('mobileMenu').classList.toggle('hidden');
+    }
+
+    // ── PASSWORD TOGGLE ──
+    function togglePass() {
+      const inp = document.getElementById('inp-pass');
+      const btn = document.getElementById('eyeBtn');
+      if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'HIDE'; }
+      else { inp.type = 'password'; btn.textContent = 'SHOW'; }
+    }
+
+    // ── SIGN UP ──
+    function handleSignup() {
+      const name  = document.getElementById('inp-name').value.trim();
+      const email = document.getElementById('inp-email').value.trim();
+      const phone = document.getElementById('inp-phone').value.trim();
+      const pass  = document.getElementById('inp-pass').value;
+      const err   = document.getElementById('errMsg');
+      err.classList.add('hidden');
+      if (!name || !email || !phone || !pass) {
+        err.textContent = 'Please fill in all fields.'; err.classList.remove('hidden'); return;
+      }
+      if (!/\S+@\S+\.\S+/.test(email)) {
+        err.textContent = 'Please enter a valid email.'; err.classList.remove('hidden'); return;
+      }
+      if (pass.length < 8) {
+        err.textContent = 'Password must be at least 8 characters.'; err.classList.remove('hidden'); return;
+      }
+      document.getElementById('signupForm').classList.add('hidden');
+      document.getElementById('successMsg').classList.remove('hidden');
+    }
+
+    function clearForm() {
+      ['inp-name','inp-email','inp-phone','inp-pass'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('errMsg').classList.add('hidden');
+    }
+
+    // ── CONTACT ──
+    function sendMessage(btn) {
+      btn.textContent = '✓ Message sent!';
+      btn.classList.replace('bg-olive-500','bg-olive-700');
+      setTimeout(() => { btn.textContent = 'Send Message'; btn.classList.replace('bg-olive-700','bg-olive-500'); }, 2500);
+    }
+
+    // ── SMOOTH SCROLL ──
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const t = document.querySelector(a.getAttribute('href'));
+        if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth' }); }
+      });
+    });
+  </script>
+</body>
+</html>
